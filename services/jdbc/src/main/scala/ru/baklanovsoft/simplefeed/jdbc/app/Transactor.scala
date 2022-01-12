@@ -9,18 +9,18 @@ import ru.baklanovsoft.simplefeed.jdbc.model.DBConfig
 
 object Transactor {
 
-  private def transactorResource[F[_] : Async](config: DBConfig): Resource[F, HikariTransactor[F]] =
+  private def transactorResource[F[_]: Async](config: DBConfig): Resource[F, HikariTransactor[F]] =
     for {
       ce <- ExecutionContexts.fixedThreadPool[F](config.threads)
       xa <- HikariTransactor.newHikariTransactor[F](
-        config.driver,
-        config.url,
-        config.user,
-        config.password,
-        ce
-      )
+              config.driver,
+              config.url,
+              config.user,
+              config.password,
+              ce
+            )
     } yield xa
 
-  def make[F[_] : Async]: Kleisli[Resource[F, *], DBConfig, HikariTransactor[F]] =
+  def make[F[_]: Async]: Kleisli[Resource[F, *], DBConfig, HikariTransactor[F]] =
     Kleisli(config => transactorResource[F](config))
 }

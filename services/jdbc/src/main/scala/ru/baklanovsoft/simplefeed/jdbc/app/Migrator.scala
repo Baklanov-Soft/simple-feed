@@ -11,31 +11,32 @@ import ru.baklanovsoft.simplefeed.jdbc.model.DBConfig
 
 import scala.jdk.CollectionConverters._
 
-
 object Migrator {
 
-  private def validate[F[_] : Logger : Sync](flywayConfig: FluentConfiguration): F[Unit] =
+  private def validate[F[_]: Logger: Sync](flywayConfig: FluentConfiguration): F[Unit] =
     for {
       validated <- Sync[F].delay(
-        flywayConfig
-          .ignoreMigrationPatterns("*:pending")
-          .load()
-          .validateWithResult
-      )
+                     flywayConfig
+                       .ignoreMigrationPatterns("*:pending")
+                       .load()
+                       .validateWithResult
+                   )
 
       _ <- Sync[F].whenA(!validated.validationSuccessful)(
-        validated.invalidMigrations.asScala.toList.traverse(error => Logger[F].error(s"Invalid migration: $error"))
-      )
+             validated.invalidMigrations.asScala.toList.traverse(error => Logger[F].error(s"Invalid migration: $error"))
+           )
 
       _ <- Sync[F].whenA(!validated.validationSuccessful)(
-        Sync[F].raiseError(new Error("Migrations validation failed (see the logs)"))
-      )
+             Sync[F].raiseError(new Error("Migrations validation failed (see the logs)"))
+           )
     } yield ()
 
-  def migrate[F[_] : Logger : Sync]: Kleisli[F, DBConfig, Unit] = Kleisli { config =>
+  def migrate[F[_]: Logger: Sync]: Kleisli[F, DBConfig, Unit] = Kleisli { config =>
     for {
-      _ <- Logger[F].info(s"Starting the migrations module for database: ${config.url} " +
-        s"with driver: ${config.driver}, migrations enabled: ${config.migrateOnStart}")
+      _ <- Logger[F].info(
+             s"Starting the migrations module for database: ${config.url} " +
+               s"with driver: ${config.driver}, migrations enabled: ${config.migrateOnStart}"
+           )
 
       flywayConfig =
         Flyway.configure
@@ -55,18 +56,20 @@ object Migrator {
       _ <- Logger[F].info("Migrations validation successful")
 
       count <- Sync[F].ifM(Sync[F].pure(config.migrateOnStart))(
-        Sync[F].delay(flywayConfig.load().migrate().migrationsExecuted),
-        Sync[F].pure(0)
-      )
+                 Sync[F].delay(flywayConfig.load().migrate().migrationsExecuted),
+                 Sync[F].pure(0)
+               )
 
       _ <- Logger[F].info(s"Migrations executed: $count")
 
       _ <- flywayConfig.load().info().all().toList.traverse { i =>
-        i.getState match {
-          case MigrationState.SUCCESS => Sync[F].unit
-          case e => Sync[F].raiseError[Unit](new Error(s"Migration ${i.getDescription} status is not \"SUCCESS\": ${e.toString}"))
-        }
-      }
+             i.getState match {
+               case MigrationState.SUCCESS => Sync[F].unit
+               case e                      =>
+                 Sync[F]
+                   .raiseError[Unit](new Error(s"Migration ${i.getDescription} status is not SUCCESS: ${e.toString}"))
+             }
+           }
 
     } yield ()
   }

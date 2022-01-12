@@ -15,12 +15,11 @@ import scala.annotation.nowarn
 @nowarn
 object Main extends IOApp {
 
-  private def app[F[_] : Async] = for {
+  private def app[F[_]: Async] = for {
     implicit0(logger: Logger[F]) <- Slf4jLogger.create[F]
-    config <- ConfigSource.default.loadF[F, AppConfiguration]
-    _ <- Migrator.migrate.local[AppConfiguration](_.db).run(config)
+    config                       <- ConfigSource.default.loadF[F, AppConfiguration]
+    _                            <- Migrator.migrate.local[AppConfiguration](_.db).run(config)
   } yield ()
-
 
   override def run(args: List[String]): IO[ExitCode] = app[IO] >> IO(ExitCode.Success)
 }
