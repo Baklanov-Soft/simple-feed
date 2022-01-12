@@ -1,5 +1,6 @@
 CREATE TABLE tag_timestamp(
-  id UUID NOT NULL PRIMARY KEY,
-  tag VARCHAR(200) NOT NULL,
-  last_visited TIMESTAMP NOT NULL
+  tag VARCHAR(200) NOT NULL PRIMARY KEY,
+  last_visited TIMESTAMP WITH TIME ZONE NOT NULL
 );
+
+CREATE INDEX idx_tag ON tag_timestamp(tag);
