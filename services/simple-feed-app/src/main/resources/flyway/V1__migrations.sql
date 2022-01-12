@@ -1,0 +1,5 @@
+CREATE TABLE tag_timestamp(
+  id UUID NOT NULL PRIMARY KEY,
+  tag VARCHAR(200) NOT NULL,
+  last_visited TIMESTAMP NOT NULL
+);
