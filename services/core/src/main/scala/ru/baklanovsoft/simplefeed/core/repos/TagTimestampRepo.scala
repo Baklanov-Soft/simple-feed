@@ -23,11 +23,11 @@ trait TagTimestampRepo[F[_]] {
 object TagTimestampRepo {
   sealed trait TagTimestampRepoError extends DomainError
 
-  final object NoTimestampFound extends TagTimestampRepoError {
+  final object TagNotFound extends TagTimestampRepoError {
     override def httpStatusCode: Int = 404
   }
 
-  final object DuplicateTimestamp extends TagTimestampRepoError {
+  final object DuplicateTag extends TagTimestampRepoError {
     override def httpStatusCode: Int = 409
   }
 }

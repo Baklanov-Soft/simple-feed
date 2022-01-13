@@ -63,14 +63,22 @@ object Migrator {
                  Sync[F].pure(0)
                )
 
-      _ <- flywayConfig.load().info().all().toList.traverse { i =>
-             i.getState match {
-               case MigrationState.SUCCESS => Sync[F].unit
-               case e                      =>
-                 Sync[F]
-                   .raiseError[Unit](new Error(s"Migration ${i.getDescription} status is not SUCCESS: ${e.toString}"))
-             }
-           }
+      _ <-
+        Sync[F]
+          .delay(flywayConfig.load().info().all().toList)
+          .flatMap(_.traverse { i =>
+            i.getState match {
+              case MigrationState.SUCCESS => Sync[F].unit
+              case e                      =>
+                Sync[F]
+                  .raiseError[Unit](
+                    new Error(
+                      s"Migration [${i.getDescription}] [${i.getPhysicalLocation}] status is not SUCCESS: ${e.toString}"
+                    )
+                  )
+            }
+
+          })
 
       _ <- Logger[F].info(s"Migrations were successful. Migrations executed: $count")
 
