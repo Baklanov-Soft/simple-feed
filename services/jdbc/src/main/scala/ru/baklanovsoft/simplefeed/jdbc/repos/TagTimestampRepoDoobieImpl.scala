@@ -5,11 +5,12 @@ import doobie.ConnectionIO
 import doobie.implicits._
 import ru.baklanovsoft.simplefeed.core.records.TagTimestamp
 import ru.baklanovsoft.simplefeed.core.repos.TagTimestampRepo
+// this contains Instant implicit codecs for Doobie so it is actually used
 import doobie.implicits.javatimedrivernative.JavaTimeInstantMeta
 
 import java.time.Instant
 
-class TagTimestampRepoImpl extends TagTimestampRepo[ConnectionIO] {
+class TagTimestampRepoDoobieImpl extends TagTimestampRepo[ConnectionIO] {
 
   override def get(tag: String): ConnectionIO[TagTimestamp] =
     for {
@@ -31,7 +32,17 @@ class TagTimestampRepoImpl extends TagTimestampRepo[ConnectionIO] {
       _        <- sql"INSERT INTO tag_timestamp(tag, last_visited) VALUES ($tag, $timestamp)".update.run
     } yield TagTimestamp(tag, timestamp)
 
-  override def update(tag: String, timestamp: Instant): ConnectionIO[TagTimestamp] = ???
+  override def update(tag: String, timestamp: Instant): ConnectionIO[TagTimestamp] =
+    for {
+      maybeTag <- lookup(tag)
+      _        <- Sync[ConnectionIO].fromOption(maybeTag, TagTimestampRepo.NoTimestampFound)
+      _        <- sql"UPDATE tag_timestamp SET last_visited = $timestamp".update.run
+    } yield TagTimestamp(tag, timestamp)
 
-  override def delete(tag: String): ConnectionIO[Unit] = ???
+  override def delete(tag: String): ConnectionIO[Unit] =
+    for {
+      maybeTag <- lookup(tag)
+      _        <- Sync[ConnectionIO].fromOption(maybeTag, TagTimestampRepo.NoTimestampFound)
+      _        <- sql"DELETE FROM tag_timestamp WHERE tag = $tag".update.run
+    } yield ()
 }

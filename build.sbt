@@ -5,6 +5,7 @@ ThisBuild / scalaVersion := "2.13.8"
 lazy val commonDeps = Seq(
   addCompilerPlugin(("org.typelevel" % "kind-projector" % "0.13.2").cross(CrossVersion.full)),
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+  scalafmtOnCompile := true,
   libraryDependencies += Dependencies.cats,
   libraryDependencies += Dependencies.catsEffect,
   libraryDependencies += Dependencies.fs2,

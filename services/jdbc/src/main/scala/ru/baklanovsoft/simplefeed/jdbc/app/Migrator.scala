@@ -7,6 +7,7 @@ import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.MigrationState
 import org.flywaydb.core.api.configuration.FluentConfiguration
 import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 import ru.baklanovsoft.simplefeed.jdbc.model.DBConfig
 
 import scala.jdk.CollectionConverters._
@@ -31,8 +32,10 @@ object Migrator {
            )
     } yield ()
 
-  def migrate[F[_]: Logger: Sync]: Kleisli[F, DBConfig, Unit] = Kleisli { config =>
+  def migrate[F[_]: Sync]: Kleisli[F, DBConfig, Unit] = Kleisli { config =>
     for {
+      implicit0(logger: Logger[F]) <- Slf4jLogger.create[F]
+
       _ <- Logger[F].info(
              s"Starting the migrations module for database: ${config.url} " +
                s"with driver: ${config.driver}, migrations enabled: ${config.migrateOnStart}"
@@ -60,8 +63,6 @@ object Migrator {
                  Sync[F].pure(0)
                )
 
-      _ <- Logger[F].info(s"Migrations executed: $count")
-
       _ <- flywayConfig.load().info().all().toList.traverse { i =>
              i.getState match {
                case MigrationState.SUCCESS => Sync[F].unit
@@ -70,6 +71,8 @@ object Migrator {
                    .raiseError[Unit](new Error(s"Migration ${i.getDescription} status is not SUCCESS: ${e.toString}"))
              }
            }
+
+      _ <- Logger[F].info(s"Migrations were successful. Migrations executed: $count")
 
     } yield ()
   }
